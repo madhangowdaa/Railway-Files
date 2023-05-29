@@ -5,6 +5,51 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from bot import Bot
 from helper_func import encode, get_message_id
+import base64
+
+@Bot.on_message(filters.private & filters.user(ADMINS) & filters.command('groups'))
+async def groups(client: Client, message: Message):
+    async def get_message_id(message):
+        if message.forward_from_chat and message.forward_from_chat.id == client.db_channel.id:
+            return message.forward_from_message_id
+        elif message.text.startswith("https://t.me/c/{db_channel_id}/"):
+            link_parts = message.text.split('/')
+            try:
+                return int(link_parts[-1])
+            except ValueError:
+                return None
+        else:
+            return None
+
+    while True:
+        try:
+            first_message = await client.ask(text="Forward the First Message from DB Channel (with Quotes)..\n\nor Send the DB Channel Post Link", chat_id=message.from_user.id, filters=(filters.forwarded | (filters.text & ~filters.forwarded)), timeout=60)
+        except:
+            return
+        f_msg_id = await get_message_id(first_message)
+        if f_msg_id:
+            break
+        else:
+            await first_message.reply("❌ Error\n\nThis Forwarded Post is not from my DB Channel or this Link is taken from DB Channel", quote=True)
+            continue
+
+    while True:
+        try:
+            second_message = await client.ask(text="Forward the Last Message from DB Channel (with Quotes)..\nor Send the DB Channel Post link", chat_id=message.from_user.id, filters=(filters.forwarded | (filters.text & ~filters.forwarded)), timeout=60)
+        except:
+            return
+        s_msg_id = await get_message_id(second_message)
+        if s_msg_id:
+            break
+        else:
+            await second_message.reply("❌ Error\n\nThis Forwarded Post is not from my DB Channel or this Link is taken from DB Channel", quote=True)
+            continue
+
+    string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
+    base64_string = base64.urlsafe_b64encode(string.encode()).decode()
+    link = f"https://telegram.me/{client.username}?start={base64_string}"
+    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+
 
 @Bot.on_message(filters.private & filters.user(ADMINS) & filters.command('group'))
 async def group(client: Client, message: Message):
