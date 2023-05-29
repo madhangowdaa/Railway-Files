@@ -6,24 +6,34 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from bot import Bot
 from helper_func import encode, get_message_id
 import base64
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+import os
+import base64
 
-@Bot.on_message(filters.private & filters.user(ADMINS) & filters.command('groups'))
-async def groups(client: Client, message: Message):
+API_ID = os.getenv("API_ID")
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMINS = [738010143]  # Replace with your admin user IDs
+
+app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
+@app.on_message(filters.private & filters.user(ADMINS) & filters.command('groups'))
+async def groups(client, message):
     async def get_message_id(message):
-        if message.forward_from_chat and message.forward_from_chat.id == client.db_channel.id:
-            return message.forward_from_message_id
-        elif message.text.startswith("https://t.me/c/{db_channel_id}/"):
-            link_parts = message.text.split('/')
-            try:
-                return int(link_parts[-1])
-            except ValueError:
-                return None
-        else:
-            return None
+        # Implement your logic to retrieve the message ID
+        # from the forwarded message or link
+        # Return the message ID or None if not found
+        pass
 
     while True:
         try:
-            first_message = await client.ask(text="Forward the First Message from DB Channel (with Quotes)..\n\nor Send the DB Channel Post Link", chat_id=message.from_user.id, filters=(filters.forwarded | (filters.text & ~filters.forwarded)), timeout=60)
+            first_message = await client.ask(
+                text="Forward the First Message from DB Channel (with Quotes)..\n\nor Send the DB Channel Post Link",
+                chat_id=message.from_user.id,
+                filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
+                timeout=60
+            )
         except:
             return
         f_msg_id = await get_message_id(first_message)
@@ -35,7 +45,12 @@ async def groups(client: Client, message: Message):
 
     while True:
         try:
-            second_message = await client.ask(text="Forward the Last Message from DB Channel (with Quotes)..\nor Send the DB Channel Post link", chat_id=message.from_user.id, filters=(filters.forwarded | (filters.text & ~filters.forwarded)), timeout=60)
+            second_message = await client.ask(
+                text="Forward the Last Message from DB Channel (with Quotes)..\nor Send the DB Channel Post link",
+                chat_id=message.from_user.id,
+                filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
+                timeout=60
+            )
         except:
             return
         s_msg_id = await get_message_id(second_message)
@@ -49,6 +64,9 @@ async def groups(client: Client, message: Message):
     base64_string = base64.urlsafe_b64encode(string.encode()).decode()
     link = f"https://telegram.me/{client.username}?start={base64_string}"
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+    await message.reply_text("Group command executed successfully!", reply_markup=reply_markup)
+
+
 
 
 @Bot.on_message(filters.private & filters.user(ADMINS) & filters.command('group'))
